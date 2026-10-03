@@ -1,0 +1,20 @@
+[project]
+name = "rmit1ne-backend"
+version = "0.2.0"
+description = "RMIT 1NE backend: Canvas integration, lecture ingestion, hybrid GraphRAG assistant"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -p no:cacheprovider"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+lint.select = ["E", "F", "I", "UP"]

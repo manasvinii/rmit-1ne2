@@ -1,0 +1,207 @@
+@if (subjectsError()) {
+  <!-- Backend not running / Canvas error -->
+  <div class="container gap-28">
+    <h1 class="page-title">What will you teach today?</h1>
+    <section class="card stack gap-14">
+      <h2 class="card-title">Couldn't load your subjects</h2>
+      <p class="label-muted">{{ subjectsError() }}</p>
+      <p class="fine-print">
+        Start the backend in a terminal: <code>cd backend</code>, <code>source .venv/bin/activate</code>,
+        <code>uvicorn app.main:app --reload --port 8000</code>. It should be reachable at {{ apiBase }}.
+      </p>
+      <div>
+        <button type="button" class="btn btn--violet" (click)="loadSubjects()">Try again</button>
+      </div>
+    </section>
+  </div>
+} @else if (!subject() || !week()) {
+  <!-- Loading, or no subjects found -->
+  <div class="container gap-28">
+    <h1 class="page-title">What will you teach today?</h1>
+    <section class="card stack gap-14">
+      <div class="info-bar">
+        <svg appIcon name="sync" [size]="20" [class.spin]="!subjects()" style="color: var(--violet)"></svg>
+        {{ subjects() ? 'No subjects with weekly modules found on Canvas.' : 'Loading your subjects from Canvas…' }}
+      </div>
+    </section>
+  </div>
+} @else {
+  <div class="container gap-28">
+    <div class="stack gap-10">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a routerLink="/">Home</a>
+        <svg appIcon name="chevronRight" [size]="14" [stroke]="2"></svg>
+        <span aria-current="page">New teaching session</span>
+      </nav>
+      <h1 class="page-title">What will you teach today?</h1>
+    </div>
+
+    <!-- Subjects (Canvas courses) -->
+    <div class="subject-tabs" role="group" aria-label="Subject">
+      @for (s of subjects(); track s.id) {
+        <button type="button" [attr.aria-pressed]="s.id === subject()!.id" (click)="chooseSubject(s)">
+          <span class="subject-tabs__code">{{ s.code }}</span>
+          {{ s.name }}
+        </button>
+      }
+    </div>
+
+    <div class="split">
+      <div class="split__main">
+        <!-- Step 1: weeks -->
+        <section class="card stack gap-20">
+          <div class="row-between wrap gap-12">
+            <h2 class="step-title"><span class="step-num">1</span>Choose the weeks</h2>
+            <div class="segmented" role="group" aria-label="Scope">
+              <button type="button" [attr.aria-pressed]="mode() === 'single'" (click)="setMode('single')">Just one week</button>
+              <button type="button" [attr.aria-pressed]="mode() === 'range'" (click)="setMode('range')">Everything up to a week</button>
+              <button type="button" [attr.aria-pressed]="mode() === 'pick'" (click)="setMode('pick')">Pick weeks</button>
+            </div>
+          </div>
+
+          <div class="week-grid">
+            @for (n of weekNumbers(); track n) {
+              <button
+                type="button"
+                class="week-btn"
+                [class.is-selected]="isChosen(n)"
+                [class.is-range]="mode() === 'range' && n < week()!"
+                [disabled]="n > currentWeek() || !hasMaterial(n)"
+                [attr.aria-pressed]="isChosen(n)"
+                [attr.aria-label]="'Week ' + n + ': ' + topicFor(n) + (n > currentWeek() ? ', not released yet' : !hasMaterial(n) ? ', no material synced' : '')"
+                [title]="topicFor(n)"
+                (click)="chooseWeek(n)"
+              >
+                <small>{{ n > currentWeek() ? 'SOON' : 'WEEK' }}</small>
+                {{ n }}
+              </button>
+            }
+          </div>
+
+          <div class="info-bar">
+            <svg appIcon name="info" [size]="20" style="color: var(--violet)"></svg>
+            {{ rangeLabel() }}
+          </div>
+        </section>
+
+        <!-- Canvas materials for the chosen week(s) -->
+        <section class="card stack gap-16">
+          <div class="row-between wrap gap-8">
+            <h2 class="card-title">Material from Canvas</h2>
+            <span class="row gap-12">
+              @if (!materialsLoading() && materials().length > 0) {
+                <button type="button" class="link-btn link-sm" (click)="downloadAll()" title="Download the ticked material as a zip">Download all</button>
+              }
+              <span class="included">
+                <span class="status-dot status-dot--teal"></span>
+                {{ materialsLoading() ? 'Loading…' : includedCount() + ' of ' + materials().length + ' included' }}
+              </span>
+            </span>
+          </div>
+
+          @if (materialsLoading()) {
+            <div class="info-bar">
+              <svg appIcon name="sync" [size]="20" class="spin" style="color: var(--violet)"></svg>
+              Loading {{ rangeLabel() }}…
+            </div>
+          } @else if (materialsError()) {
+            <p class="form-error">{{ materialsError() }}</p>
+          } @else if (materials().length === 0) {
+            <p class="label-muted">Nothing for this week on Canvas yet.</p>
+          } @else {
+            @for (m of materials(); track m.id) {
+              <label class="material">
+                <input type="checkbox" [checked]="isIncluded(m)" (change)="toggle(m)" />
+                <span [class]="'material__icon material__icon--' + icon(m).tone">
+                  <svg appIcon [name]="icon(m).icon" [size]="22"></svg>
+                </span>
+                <span class="material__text">
+                  <span class="material__title">{{ m.title }}</span>
+                  <span class="material__sub">{{ m.sub }}</span>
+                </span>
+                @if (link(m); as href) {
+                  <a
+                    class="link-sm material__open"
+                    [href]="href"
+                    target="_blank"
+                    rel="noreferrer"
+                    [title]="m.source?.type === 'file' ? 'Download file' : 'Open'"
+                    [attr.aria-label]="(m.source?.type === 'file' ? 'Download ' : 'Open ') + m.title"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <svg appIcon [name]="m.source?.type === 'file' ? 'download' : 'share'" [size]="18"></svg>
+                  </a>
+                }
+              </label>
+            }
+          }
+
+          <div class="stack gap-10" style="margin-top: 6px">
+            <span class="label-muted">
+              {{ isRange() ? 'Topics your student will mix together' : 'Key ideas your student will ask about' }}
+            </span>
+            <div class="chips">
+              @for (idea of ideas(); track idea) {
+                <span class="chip">{{ idea }}</span>
+              }
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="split__side">
+        <!-- Step 2: AI student -->
+        <section class="card stack gap-14">
+          <h2 class="step-title"><span class="step-num">2</span>Pick your student</h2>
+          @for (p of personaList; track p.id) {
+            <button type="button" class="persona" [attr.aria-pressed]="persona() === p.id" (click)="persona.set(p.id)">
+              <svg appAvatar [persona]="p.id" [size]="64"></svg>
+              <span class="persona__text">
+                <span class="persona__name">{{ p.name }} <span class="persona__kind">· {{ p.kind }}</span></span>
+                <span class="persona__desc">{{ p.desc }}</span>
+              </span>
+            </button>
+          }
+        </section>
+
+        <!-- Step 3: voice or typing, and length -->
+        <section class="card stack gap-16">
+          <h2 class="step-title"><span class="step-num">3</span>How will you teach?</h2>
+          <div class="toggle-grid" role="group" aria-label="Teaching mode">
+            <button type="button" class="toggle" [attr.aria-pressed]="input() === 'voice'" (click)="input.set('voice')">
+              <svg appIcon name="mic"></svg> Out loud
+            </button>
+            <button type="button" class="toggle" [attr.aria-pressed]="input() === 'text'" (click)="input.set('text')">
+              <svg appIcon name="keyboard"></svg> Typing
+            </button>
+          </div>
+          <div class="row-between wrap gap-10">
+            <span class="label-muted">Session length</span>
+            <div class="row gap-6" role="group" aria-label="Session length">
+              @for (v of lengths; track v) {
+                <button type="button" class="len-btn" [attr.aria-pressed]="length() === v" (click)="length.set(v)">{{ v }} min</button>
+              }
+            </div>
+          </div>
+        </section>
+
+        <button
+          type="button"
+          class="btn btn--violet btn--xl"
+          (click)="start()"
+          [disabled]="materialsLoading() || includedCount() === 0"
+        >
+          Start teaching {{ personas[persona()].name }}
+          <svg appIcon name="arrowRight" [size]="22" [stroke]="2"></svg>
+        </button>
+        <p class="fine-print center">
+          @if (includedCount() === 0 && !materialsLoading()) {
+            Tick at least one Canvas file so your student has something to learn from.
+          } @else {
+            {{ personas[persona()].name }} only knows what's in your Canvas material, so they can't bluff, and neither can you.
+          }
+        </p>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,180 @@
+<div class="container">
+  <header class="page-head">
+    <div class="stack gap-10">
+      <span class="pill">Semester 2 · Week {{ currentWeek() }}</span>
+      <h1 class="page-title">{{ greeting }}, {{ firstName() }}.</h1>
+      <p class="lede">Your students have been reading this week's Canvas material. They're confused. Time to teach them.</p>
+    </div>
+    <div class="row gap-12">
+      <button type="button" class="btn btn--ghost" (click)="sync()" [disabled]="syncState() === 'syncing'">
+        <svg appIcon [name]="syncState() === 'done' ? 'check' : 'sync'" [size]="18" [class.spin]="syncState() === 'syncing'"></svg>
+        {{ syncState() === 'syncing' ? 'Syncing…' : syncState() === 'done' ? 'Synced just now' : 'Sync from Canvas' }}
+      </button>
+      <span class="avatar-initial" role="img" [attr.aria-label]="profileLabel()">
+        {{ firstName()[0] }}
+      </span>
+    </div>
+  </header>
+
+  @if (syncError()) {
+    <p class="form-error">Canvas sync failed: {{ syncError() }}</p>
+  }
+
+  <section class="row-wrap gap-20">
+    <div class="hero">
+      <div class="hero__body">
+        @if (heroSubject(); as s) {
+          <span class="eyebrow">UP NEXT · {{ s.name.toUpperCase() }}</span>
+          <h2 class="hero__title">Pip is stuck on {{ heroTopic() }}.</h2>
+          <p>
+            Week {{ heroWeek() }} is on Canvas: {{ s.materialsSummary }}. Pip read all of it and has questions only you can answer.
+          </p>
+          <div class="hero__actions">
+            <a routerLink="/setup" [state]="setupState(s, 'single')" class="btn btn--lime btn--lg">
+              Start teaching Week {{ heroWeek() }} <svg appIcon name="arrowRight" [size]="18" [stroke]="2"></svg>
+            </a>
+            <a routerLink="/setup" [state]="{ subjectId: s.id, mode: 'pick', week: heroWeek() }" class="btn btn--outline-light btn--lg">
+              Pick other weeks
+            </a>
+          </div>
+        } @else {
+          <span class="eyebrow">UP NEXT</span>
+          <h2 class="hero__title">Loading your subjects…</h2>
+        }
+      </div>
+      <div class="hero__pip">
+        <div class="bubble">Wait… can you explain {{ heroTopic() }} to me?</div>
+        <div class="bob">
+          <svg appAvatar persona="pip" [size]="150" [onDark]="true" label="Pip, the curious student"></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="card stat-card">
+      <div class="stack gap-8">
+        <span class="label-muted">Teaching streak</span>
+        <span class="big-number">{{ streak().days }} day{{ streak().days === 1 ? '' : 's' }}</span>
+        <div class="streak">
+          @for (d of streak().week; track $index) {
+            <div class="streak__day">
+              <span [class]="'streak__dot streak__dot--' + d.state"></span>
+              {{ d.label }}
+            </div>
+          }
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="stack gap-10">
+        <div class="row-between">
+          <span class="label-muted">Ideas you can explain</span>
+          <strong>{{ explained().landed }} / {{ explained().total }}</strong>
+        </div>
+        <div
+          class="progress"
+          role="progressbar"
+          [attr.aria-valuenow]="explained().landed"
+          aria-valuemin="0"
+          [attr.aria-valuemax]="explained().total"
+          aria-label="Ideas you can explain"
+        >
+          <span [style.width.%]="explained().total ? (100 * explained().landed) / explained().total : 0"></span>
+        </div>
+      </div>
+      @if (nextDue(); as due) {
+        <div class="callout">
+          <svg appIcon name="calendar" [size]="22" style="color: var(--violet)"></svg>
+          <div>
+            <strong>{{ due.title }}</strong>
+            <br />
+            <span class="muted">{{ due.sub }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Your subjects: from Canvas -->
+  <section class="stack gap-16">
+    <div class="section-head">
+      <h2 class="section-title">Your subjects</h2>
+      <div class="legend">
+        <span><i class="swatch wk--E"></i>Explained well</span>
+        <span><i class="swatch wk--S"></i>Shaky</span>
+        <span><i class="swatch wk--G"></i>Gap found</span>
+        <span><i class="swatch wk--N"></i>Not taught yet</span>
+      </div>
+    </div>
+
+    @if (usingMock()) {
+      <p class="form-error">Showing sample subjects: the Pupil backend isn't running, so Canvas couldn't be loaded.</p>
+    }
+
+    @if (subjects(); as list) {
+      <div class="grid-cards">
+        @for (s of list; track s.id) {
+          <article class="subject">
+            <div class="row-between">
+              <span class="code">{{ s.code }}</span>
+              <span [class]="'badge badge--' + s.badge.tone">{{ s.badge.label }}</span>
+            </div>
+            <h3 class="subject__name">{{ s.name }}</h3>
+            <div>
+              <div class="weekstrip">
+                @for (c of weeks(s.progress); track $index) {
+                  <span [class]="'wk wk--' + c" [title]="'Week ' + ($index + 1) + ': ' + statusLabels[c]"></span>
+                }
+              </div>
+              <div class="weekstrip__axis">
+                <span>Wk 1</span>
+                <span>Wk {{ s.progress.length }}</span>
+              </div>
+            </div>
+            <div class="meta">
+              <svg appIcon name="video" [size]="16"></svg>
+              {{ s.materialsSummary }}
+            </div>
+            <a routerLink="/setup" [state]="setupState(s)" class="btn btn--dark btn--block">{{ s.cta }}</a>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="info-bar">
+        <svg appIcon name="sync" [size]="20" class="spin" style="color: var(--violet)"></svg>
+        Loading your subjects from Canvas…
+      </div>
+    }
+  </section>
+
+  <section class="row-wrap gap-20">
+    <div class="card gaps-card">
+      <h2 class="card-title">Gaps your students caught</h2>
+      @for (g of gaps(); track g.subjectId + g.concept) {
+        <div class="gap-row">
+          <span appStatusIcon [status]="g.status" [size]="36" [square]="true"></span>
+          <div class="gap-row__body">
+            <div class="gap-row__title">{{ g.concept }}</div>
+            <div class="gap-row__sub">{{ g.subjectName }} · Week {{ g.week }} · caught by {{ personas[g.persona].name }}</div>
+          </div>
+          <span [class]="'badge badge--' + (g.status === 'G' ? 'gap' : 'shaky')">{{ g.status === 'G' ? 'Gap' : 'Shaky' }}</span>
+          <a routerLink="/setup" [state]="gapState(g)" class="link-strong">Re-teach</a>
+        </div>
+      } @empty {
+        <p class="label-muted">No gaps yet. Teach a session and anything you couldn't explain shows up here.</p>
+      }
+    </div>
+
+    <div class="how">
+      <h2 class="card-title">How Pupil works</h2>
+      @for (step of how; track step[0]) {
+        <div class="how__step">
+          <span class="how__num">{{ $index + 1 }}</span>
+          <div>
+            <strong>{{ step[0] }}</strong>
+            <br />
+            {{ step[1] }}
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+</div>

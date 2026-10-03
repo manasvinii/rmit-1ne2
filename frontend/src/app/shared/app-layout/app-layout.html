@@ -1,0 +1,43 @@
+<div class="shell">
+  <nav class="sidebar" aria-label="Main">
+    <app-brand />
+
+    <div class="nav">
+      @for (item of nav; track item.to) {
+        <a
+          [routerLink]="item.to"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+        >
+          <svg appIcon [name]="item.icon"></svg>
+          {{ item.label }}
+        </a>
+      }
+    </div>
+
+    <div class="sidebar__footer">
+      <div class="sync-card">
+        <div class="sync-card__title">
+          <span class="status-dot" [style.background]="syncStatus().ok ? null : 'var(--red)'"></span>
+          {{ syncStatus().ok ? 'Canvas connected' : 'Canvas not connected' }}
+        </div>
+        <div class="sync-card__sub">{{ syncStatus().text }}</div>
+      </div>
+
+      <div class="user-row">
+        <span class="avatar-initial avatar-initial--sm" aria-hidden="true">
+          {{ auth.user()?.name?.[0] ?? '?' }}
+        </span>
+        <span class="user-row__name">{{ auth.user()?.name }}</span>
+        <button type="button" class="icon-btn icon-btn--dark" (click)="logout()" aria-label="Log out" title="Log out">
+          <svg appIcon name="logout" [size]="18"></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+    <router-outlet />
+  </main>
+</div>

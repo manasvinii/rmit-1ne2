@@ -1,0 +1,251 @@
+<div class="session">
+  <header class="topbar">
+    <div class="row gap-16">
+      <a routerLink="/" class="icon-btn" aria-label="Leave session">
+        <svg appIcon name="arrowLeft" [size]="20" [stroke]="2"></svg>
+      </a>
+      <div>
+        <div class="topbar__title">Teaching {{ persona().name }}</div>
+        <div class="topbar__sub">{{ subjectName() }} · {{ scopeLabel() }}</div>
+      </div>
+    </div>
+    <div class="row gap-12">
+      <span class="timer" [attr.aria-label]="timeLeft() + ' left'">
+        <svg appIcon name="timer" [size]="18" [stroke]="2"></svg>
+        {{ timeLeft() }} left
+      </span>
+      <button type="button" class="btn btn--dark" (click)="end()" [disabled]="loading() || ending() || (!demo && !session())">
+        {{ ending() ? 'Drawing your map…' : 'End and see my map' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="session__body">
+    <aside class="session__left">
+      <section class="card card--tight stack gap-4">
+        <h2 class="card-title card-title--sm">Today's ideas</h2>
+        @if (loading()) {
+          <p class="small-text muted">Picking ideas from your material…</p>
+        }
+        @for (idea of ideas(); track $index) {
+          <div class="idea-row" [class.is-current]="idea.state === 'current'" [class.is-todo]="idea.state === 'todo'">
+            @if (idea.state === 'current') {
+              <span class="idea-row__now" aria-hidden="true"><span></span></span>
+            } @else {
+              <span appStatusIcon [status]="idea.state === 'todo' ? 'N' : idea.state" [size]="26"></span>
+            }
+            <span class="idea-row__name">{{ idea.name }}</span>
+            @switch (idea.state) {
+              @case ('current') { <span class="idea-row__state idea-row__state--now">Teaching now</span> }
+              @case ('E') { <span class="idea-row__state idea-row__state--good">Got it</span> }
+              @case ('S') { <span class="idea-row__state idea-row__state--shaky">Shaky</span> }
+              @case ('G') { <span class="idea-row__state idea-row__state--shaky">Gap</span> }
+            }
+          </div>
+        }
+      </section>
+
+      @if (source(); as src) {
+        <section class="card card--tight stack gap-12">
+          <h2 class="small-heading">FROM YOUR CANVAS MATERIAL</h2>
+          <div class="slide-thumb" aria-hidden="true">
+            <div class="slide-thumb__title"></div>
+            <div class="slide-thumb__boxes">
+              <span></span><span class="on"></span><span></span><span class="on"></span><span></span>
+            </div>
+            <div class="slide-thumb__line"></div>
+          </div>
+          <div class="small-text">
+            @if (link(src.url); as href) {
+              <a [href]="href" target="_blank" rel="noreferrer"><strong>{{ src.title }}</strong></a>
+            } @else {
+              <strong>{{ src.title }}</strong>
+            }
+            @if (src.resource) {
+              <br /><span class="muted">{{ src.resource }}</span>
+            }
+            <br />
+            <span class="muted">{{ persona().name }}'s next question comes from here.</span>
+          </div>
+          @if (src.video; as video) {
+            @if (link(video.url); as href) {
+              <a [href]="href" target="_blank" rel="noreferrer" class="link-strong row gap-8">
+                <svg appIcon name="play" [size]="16"></svg>
+                {{ video.label }}
+              </a>
+            } @else {
+              <span class="link-strong row gap-8">
+                <svg appIcon name="play" [size]="16"></svg>
+                {{ video.label }}
+              </span>
+            }
+          }
+        </section>
+      }
+    </aside>
+
+    <section class="chat" aria-label="Conversation">
+      <div class="chat__log" #log aria-live="polite">
+        @if (error()) {
+          <div class="flag flag--hint">
+            <svg appIcon name="info" [size]="16"></svg>
+            {{ error() }}
+          </div>
+        }
+        @for (m of messages(); track $index) {
+          @if (m.type === 'flag') {
+            <div class="flag">
+              <span appStatusIcon status="S" [size]="20"></span>
+              {{ flagText(m.text) }}
+            </div>
+          } @else if (m.type === 'hint') {
+            <div class="flag flag--hint">
+              <svg appIcon name="bulb" [size]="16"></svg>
+              {{ m.text }}
+            </div>
+          } @else if (m.from === 'me') {
+            <div class="msg msg--me">
+              <div class="msg__bubble">{{ m.text }}</div>
+              <span class="msg__meta">
+                <svg appIcon [name]="m.via === 'voice' ? 'mic' : 'keyboard'" [size]="12" [stroke]="2.2"></svg>
+                {{ m.meta }}
+              </span>
+            </div>
+          } @else {
+            <div class="msg">
+              <svg appAvatar [persona]="persona().id" [size]="36"></svg>
+              <div class="msg__bubble">{{ m.text }}</div>
+            </div>
+          }
+        }
+
+        @if (thinking() || loading()) {
+          <div class="msg">
+            <svg appAvatar [persona]="persona().id" [size]="36"></svg>
+            <div class="msg__bubble typing" [attr.aria-label]="persona().name + ' is thinking'">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        }
+
+        @if (listening() && liveDraft()) {
+          <div class="msg msg--me msg--live">
+            <div class="msg__bubble">
+              {{ liveDraft() }}
+              <span class="caret"></span>
+            </div>
+            <span class="msg__meta">Transcribing…</span>
+          </div>
+        }
+      </div>
+
+      <div class="composer">
+        <button
+          type="button"
+          class="mic"
+          [class.is-on]="listening()"
+          (click)="toggleMic()"
+          [disabled]="loading()"
+          [attr.aria-label]="listening() ? 'Pause microphone' : 'Start microphone'"
+          [attr.aria-pressed]="listening()"
+        >
+          <svg appIcon name="mic" [size]="30" [stroke]="2"></svg>
+        </button>
+        <div class="composer__status">
+          <span class="composer__label">
+            @if (voiceError()) {
+              {{ voiceError() }}
+            } @else if (complete()) {
+              {{ persona().name }} has got everything. End the session to see your map.
+            } @else {
+              {{ listening() ? 'Listening… keep explaining' : 'Paused. Tap the mic to carry on' }}
+            }
+          </span>
+          <div class="wave" [class.is-on]="listening()" aria-hidden="true">
+            @for (bar of wave; track $index) {
+              <span [style.height.px]="bar.h" [style.animation-delay.ms]="bar.delay"></span>
+            }
+          </div>
+        </div>
+        <div class="row wrap gap-8">
+          <button type="button" class="btn btn--ghost" title="Whiteboard coming soon">
+            <svg appIcon name="pen" [size]="18"></svg> Draw it
+          </button>
+          <button type="button" class="btn btn--ghost" (click)="showHint()" [disabled]="loading() || thinking()">
+            <svg appIcon name="bulb" [size]="18"></svg> Hint from slides
+          </button>
+          <button type="button" class="btn btn--ghost" [attr.aria-pressed]="typingOpen()" (click)="typingOpen.set(!typingOpen())">
+            <svg appIcon name="keyboard" [size]="18"></svg> Type
+          </button>
+        </div>
+
+        @if (typingOpen()) {
+          <form class="type-form" (submit)="send($event)">
+            <label for="explain" class="sr-only">Explain it to {{ persona().name }}</label>
+            <input
+              id="explain"
+              class="input"
+              autocomplete="off"
+              [placeholder]="'Explain it to ' + persona().name + '…'"
+              [value]="draft()"
+              (input)="draft.set(value($event))"
+            />
+            <button type="submit" class="btn btn--violet btn--lg" [disabled]="!draft().trim() || thinking() || loading()">
+              <svg appIcon name="send" [size]="18"></svg> Send
+            </button>
+          </form>
+        }
+      </div>
+    </section>
+
+    <aside class="session__right">
+      <section class="persona-card">
+        <div class="bob">
+          <svg
+            appAvatar
+            [persona]="persona().id"
+            [size]="140"
+            [mood]="confusion() <= 1 ? 'curious' : 'puzzled'"
+            [onDark]="true"
+            [label]="persona().name + (confusion() <= 1 ? ' looking pleased' : ' looking puzzled')"
+          ></svg>
+        </div>
+        <div>
+          <div class="persona-card__name">{{ persona().name }}</div>
+          <div class="persona-card__kind">{{ persona().kind }}</div>
+        </div>
+        <div class="persona-card__meter">
+          <div class="row-between small-text">
+            <span style="color: var(--nav-text)">{{ persona().name }}'s confusion</span>
+            <span style="color: var(--amber-bar)">{{ confusionLabel() }}</span>
+          </div>
+          <div class="meter" role="meter" [attr.aria-valuenow]="confusion()" aria-valuemin="0" aria-valuemax="5">
+            @for (i of meter; track i) {
+              <span [class.on]="i < confusion()"></span>
+            }
+          </div>
+          <div class="persona-card__hint">
+            @if (currentIdea(); as idea) {
+              Bring it to zero to finish "{{ idea }}".
+            } @else if (complete()) {
+              Every idea covered.
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="notebook">
+        <h2 class="small-heading">{{ persona().name.toUpperCase() }}'S NOTEBOOK</h2>
+        <p class="small-text muted">What actually got through to {{ persona().name }}, in their own words.</p>
+        <div class="notebook__lines">
+          @for (line of notebook(); track $index) {
+            <span [class.warn]="line.warn">· {{ line.text }}</span>
+          }
+          @if (!notebook().length && !demo) {
+            <span class="muted">Nothing yet. Start explaining!</span>
+          }
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
