@@ -2,100 +2,242 @@
 
 > Every AI study tool explains things to you. Pupil flips it: **you** teach a confused AI student, and it finds the gaps in your understanding.
 
-Our "Innovating Education" hackathon entry. Students pick any weeks of their Canvas course (one week, everything up
-to a week, or any combination) and tick which materials to use. They then explain the ideas, out loud or typed, to
-an AI student who **only knows the ticked material**:
+This is our "Innovating Education" hackathon entry, built on top of **RMIT 1NE**, our Canvas-powered study backend. Students pick a week (or several) of their course, tick the lecture material they want to be tested on, then explain it to an AI student who only knows that material. At the end they get an **Understanding Map** showing what they explained well, what was shaky, and what they couldn't explain.
 
-- **Pip**, the curious kid, needs it simple.
-- **Sage**, the sceptic, wants mechanisms and proof.
-- **Milo**, the mixed-up one, starts with a misconception you have to talk him out of.
+The AI student is grounded in the student's own lecture slides, lab notebooks and recordings, pulled from their own Canvas account.
 
-At the end they get an **Understanding Map** showing what they explained well, what was shaky, what they couldn't
-explain, and which slide to check for each.
+## What's in the box
 
-```
-frontend/   Angular app (the Pupil UI)
-backend/    FastAPI: auth, Canvas sync, ingestion (PDF slides, lecture recordings, lab notebooks),
-            vector + knowledge-graph retrieval, and the teaching engine behind /api/*
-```
+| Part | What it does |
+| ---- | ------------ |
+| **Pupil (teach)** | Teach Pip, Sage or Milo. Every answer is graded as explained, shaky or wrong, with a hint button if you get stuck. |
+| **Understanding Map** | A map of the week's ideas, built from the course concept graph, with how well you explained each one. Reteach restarts on just the shaky ideas and gaps. |
+| **Ask** | A study chat that answers from your Canvas data (deadlines, courses) and your lecture evidence, with citations. |
+| **Brainstorm** | Multiple-choice quizzes written from your own slides, each question citing the slide it came from. |
+| **Canvas sync** | Pulls your courses, assignments, modules and files with your own Canvas token. |
+| **Ingestion** | Turns slide PDFs, lab notebooks and lecture recordings into searchable chunks and a concept graph. |
 
-## How it works
+### Meet the AI students
 
-1. **Canvas → local store.** Course modules and files are synced with the student's own Canvas token, which is
-   stored encrypted on the server and never sent to the browser. Slides, uploaded recordings and lab notebooks are
-   downloaded and kept aside.
-2. **Ingestion.** Each file is split into chunks that remember their page, timestamp or notebook cell. The chunks
-   are embedded for search and turned into a **knowledge graph** (concepts, the lecture they were introduced in, and
-   what builds on what). Every graph edge cites the chunks it came from.
-3. **Setup.** The chosen weeks and ticks become an exact list of allowed resources. Everything the AI student sees
-   is filtered to that list.
-4. **Teaching.** The session's ideas are the concepts the graph says were introduced in those weeks, provided
-   they are backed by the ticked material. Every reply is grounded in retrieved chunks from that material. The
-   persona replies with a local LLM (Ollama `qwen2.5:7b`); if no LLM is available, a rule-based fallback is used.
-5. **Map.** Each idea is graded as explained, shaky, gap or didn't come up, with the slide or recording moment to
-   revisit. Weak spots feed the Home page and the semester strip.
+| Persona | Style |
+| ------- | ----- |
+| **Pip**, the curious kid | Needs simple words, asks "but why?", and asks what any jargon means. |
+| **Sage**, the sceptic | Won't accept "it just works". Wants a concrete example, the reason, and when it would fail. |
+| **Milo**, the mixed-up one | Already believes something wrong about the idea. Defends it once, and lets go only when you clearly explain why it's wrong. |
 
 ## Run it locally
 
-You need Python 3.12, Node.js 20.19+ / 22.12+, and optionally [Ollama](https://ollama.com) with
-`ollama pull qwen2.5:7b` (without it the AI student uses the rule-based fallback).
+You need:
 
-```bash
-# terminal 1: backend on :8000
+- **Python 3.10 or newer** for the backend
+- **Node.js 20 or newer** for the frontend (Angular 21)
+- **[Ollama](https://ollama.com)** if you want the AI student to run on your own machine
+
+### One-time setup
+
+**1. Backend**
+
+```
 cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env          # set DEMO_USER_EMAIL for the "Continue with Canvas" demo button
-.venv/bin/python -m uvicorn app.main:app --port 8000
-
-# terminal 2: frontend on :5173
-cd frontend
-npm install
-npm start
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env
 ```
 
-Open http://localhost:5173 and click **Continue with Canvas**. In this demo build that signs you in as the demo
-student whose Canvas course has been synced. You can also create an account with email and a password of 8+
-characters, then add your Canvas token on the backend (see `backend/README.md`).
+Open `backend/.env` and set at least:
 
-Loading your own course content is covered in `backend/README.md` (`python -m app.cli canvas-content --ingest`,
-`ingest-labs`).
+```
+# Point the AI student at your local Ollama server
+OPENAI_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=<the model you pulled, e.g. llama3.1>
+
+# Lets "Continue with Canvas" sign in as this existing student (ignored in production)
+DEMO_USER_EMAIL=<email of a student already in your local database>
+```
+
+You don't need to set `JWT_SECRET` or `FERNET_KEY` for local development. The backend generates them on first run and saves them next to the local database (gitignored). Set them yourself in production.
+
+**2. Frontend**
+
+```
+cd frontend
+npm install
+```
+
+**3. Ollama model**
+
+```
+ollama pull <the same model name you put in LLM_MODEL>
+```
+
+### Start everything
+
+Open three terminals and run these in order.
+
+**Terminal 1: the AI model**
+
+```
+ollama serve
+```
+
+**Terminal 2: the backend (port 8000)**
+
+```
+cd backend
+.venv/bin/python -m uvicorn app.main:app --port 8000
+```
+
+**Terminal 3: the frontend (port 5173)**
+
+```
+cd frontend
+npx ng serve --port 5173
+```
+
+If `node` isn't on your PATH, add it first, for example `export PATH=/path/to/node/bin:$PATH`.
+
+Then open <http://localhost:5173>.
+
+The frontend talks to the backend at `http://localhost:8000` (set as `API_BASE` in `frontend/src/app/core/api.service.ts`). The backend already allows `http://localhost:5173` through CORS, so you don't need to change anything if you use these ports.
+
+### Check it's working
+
+- <http://localhost:8000/health> should return `status: ok`, and tells you whether an LLM is enabled and which storage is in use.
+- On the login screen, click **Continue with Canvas** to sign in as the demo student, or sign up with an email and password.
+
+### Put your own course in
+
+The demo needs a student with ingested course material. Use the command-line tools from `backend/`:
+
+| Command | What it does |
+| ------- | ------------ |
+| `.venv/bin/python -m app.cli create-user --email you@student.rmit.edu.au --name "Your Name"` | Create a local student |
+| `.venv/bin/python -m app.cli ingest --user-id <id> --course-id <course> --dir <folder>` | Ingest lecture PDFs and recordings from a folder |
+| `.venv/bin/python -m app.cli canvas-content --user-id <id> --course-id <canvas course id> --ingest` | Download and ingest material from Canvas |
+| `.venv/bin/python -m app.cli graph --user-id <id> --course-id <course> --rebuild` | Rebuild the course concept graph |
+| `.venv/bin/python -m app.cli ask --user-id <id> "your question"` | Ask a question from the terminal |
+
+### Other commands
+
+| Command | What it does |
+| ------- | ------------ |
+| `cd backend && make test` | Run the backend test suite |
+| `cd backend && make lint` | Lint the backend with ruff |
+| `cd frontend && npm run build` | Build the frontend into `dist/` |
+| `cd frontend && npm test` | Run the frontend tests |
 
 ## Screens
 
-| Route      | Screen               | Backed by                                                                  |
-| ---------- | -------------------- | -------------------------------------------------------------------------- |
-| `/login`   | Login / sign up      | `POST /login`, `POST /signup`, `POST /api/demo-login`                      |
-| `/`        | Home                 | `/api/subjects`, `/api/sessions`, `/api/gaps`, `/me/assignments`, `/canvas/sync` |
-| `/setup`   | New teaching session | `/api/subjects/{id}/materials`, `/api/subjects/{id}/download`               |
-| `/session` | Teaching session     | `/api/sessions` (start, messages, hint, end); voice via the browser's Web Speech API |
-| `/map`     | Understanding Map    | `/api/sessions/{id}/map`, `/api/sessions/{id}/reteach`                      |
-| `/ask`     | Ask Pupil (chatbot)  | `POST /query`, which routes each question (see below)                        |
+| Route | Screen | What it does |
+| ----- | ------ | ------------ |
+| `/login` | Login / sign up | Canvas demo button, or email and password with validation |
+| `/` | Home | This week's card, streak, your subjects with week strips, and the concepts you keep missing |
+| `/setup` | New teaching session | Pick subject, one week, a range or any weeks, tick the files, choose a persona, voice or text, and a length of 10, 15 or 25 minutes |
+| `/session` | Teaching session | Teach the AI student by voice or text, ask for a hint, watch the timer, end when you're done |
+| `/map` | Understanding Map | Concept map of what you explained well, what was shaky and what you couldn't explain, plus a semester overview |
+| `/ask` | Ask Pupil | Study chat with citations back to the slide, page or recording |
 
-**Ask Pupil** answers any question about your subjects, and every answer cites its sources:
+All pages except `/login` need you to be signed in. The log-out button is at the bottom of the sidebar.
 
-- **Canvas data** (assignments, due dates, course list) answers factual questions like "when is A2 due". These
-  answers come straight from the synced tables with no LLM, so dates can't be invented.
-- **Vector search** over slide text and video transcripts answers "explain X" questions and links to the exact slide
-  or timestamp.
-- **The knowledge graph** (concepts, the week that introduced them, prerequisites, what each assignment assesses)
-  answers "what's new in week 6", "what should I revise before CNNs" and "which lectures do I need for A2".
+## How a session works
 
-A rule-based router picks the source, and the label above each answer shows which one was used. For lecture and
-graph questions, the LLM writes the answer only from the retrieved evidence.
+1. **Scope.** You pick the weeks and tick the files. Everything after this is filtered to that student, course, set of weeks and set of files.
+2. **Ideas to teach.** The concept graph tells us which ideas were introduced in those weeks. We keep an idea only if its slide, recording or lab evidence is in the files you ticked. A 10, 15 or 25 minute session covers 4, 5 or 7 ideas.
+3. **Teach.** The AI student replies in character and asks the next question. It uses retrieved lecture excerpts to judge your explanation, never to lecture you. You get up to three attempts per idea.
+4. **Grade.** Each answer is graded explained, shaky or wrong, with a short piece of feedback and the lecture source it was judged against.
+5. **Map.** Ideas are laid out using the concept graph's relations (type of, part of, uses, builds on and so on), coloured by how you did.
+6. **Reteach.** Start again on the same weeks and files, focused on just the shaky ideas and gaps.
 
-Opening `/session` or `/map` directly without a session shows the original scripted demo.
+## Under the hood
+
+```
+Canvas ──► sync (courses, assignments, modules, files)
+              │
+              ▼
+   slide PDFs · lab notebooks · recordings (Whisper transcripts)
+              │
+              ▼
+   chunks ──► embeddings (fastembed) ──► vector store
+      │
+      └────► concept graph (INTRODUCED_IN, BUILDS_ON, USES, ...)
+              │
+              ▼
+   Teaching sessions · Ask · Brainstorm quizzes
+   (all scoped to student + course + weeks + ticked files)
+```
+
+- **Storage:** local SQLite by default. Set `DATABASE_URL` to a Postgres/Supabase database to use pgvector.
+- **LLM:** any OpenAI-compatible endpoint, including a local Ollama server. With no LLM configured, the app still works: replies come from a key-term check, answers are extractive, and the graph uses heuristic extraction.
+- **Embeddings:** local `fastembed` by default (`BAAI/bge-small-en-v1.5`).
+- **Transcription:** `faster-whisper`, cached by file hash so a recording is only transcribed once.
+- **Incremental ingestion:** unchanged files are skipped, changed files are re-processed, and the concept graph is rebuilt.
+- **Question routing:** Ask routes each question to Canvas data, vector search, the concept graph, or graph plus vector.
+
+## Security and privacy
+
+- Passwords are hashed with bcrypt.
+- Canvas tokens are encrypted at rest and never returned to the client.
+- Every route needs a backend-issued bearer token, and the student is never taken from the request body.
+- Every lookup checks the student is allowed to see that course.
+- Media links are signed and expire.
+- Canvas access uses documented REST endpoints only. LTI tools are recorded as external links and never scraped.
+- Errors returned to the client never include internals such as SQL or stack traces.
+- The demo sign-in is disabled when `APP_ENV=production`.
+
+## Project structure
+
+```
+backend/
+  app/
+    main.py               FastAPI app and routes
+    api/                  auth, canvas, ingestion, resources, study, query, academic, pupil
+    services/             teaching, ingestion, graph extraction, retrieval, answers,
+                          quizzes, Canvas, video, LLM client, query router
+    database/             SQLite/Postgres layer, repositories, migrations
+    models/               request and graph models
+    core/                 config, security, auth
+    static/               the original RMIT 1NE study chat page
+  tests/                  automated tests
+  eval/                   retrieval and answer evaluation
+  .env.example            all settings, with comments
+
+frontend/
+  src/app/
+    pages/                login, home, setup, session, understanding-map, ask
+    shared/               layout, avatar, brand, icon, status icon
+    core/                 api service, auth, interceptor, models, mock-data
+```
+
+**Changing the look:** edit the design tokens at the top of `frontend/src/styles.css`.
+**Changing the AI students:** edit `PERSONAS` in `backend/app/services/teaching_service.py`.
+**Changing the backend address:** edit `API_BASE` in `frontend/src/app/core/api.service.ts`.
+
+## Settings you're most likely to touch
+
+| Setting (in `backend/.env`) | What it does |
+| --------------------------- | ------------ |
+| `OPENAI_BASE_URL`, `LLM_MODEL`, `OPENAI_API_KEY` | Which LLM powers the AI student and grading. Leave all empty to run without one. |
+| `DEMO_USER_EMAIL` | Student that "Continue with Canvas" signs in as |
+| `CURRENT_WEEK` | Force the current teaching week for demos |
+| `DATABASE_URL` | Use Postgres/pgvector instead of local SQLite |
+| `CORS_ORIGINS` | Frontend addresses the backend accepts |
+| `LOCAL_CONTENT_DIR` | The only folder the local ingestion endpoint may read |
+| `CANVAS_BASE_URL` | Canvas site (defaults to RMIT's) |
 
 ## Known limitations
 
-- Echo360 lecture recordings can't be downloaded; only recordings uploaded to Canvas as files get transcripts.
-- Canvas Pages and textbooks are not ingested yet. The current inputs are slides, uploaded recordings and lab
-  notebooks.
-- Voice input needs a browser with the Web Speech API (Chrome, Edge, Safari). Otherwise use **Type**.
-- "Draw it", "Share with tutor" and "Save as revision notes" are still placeholders.
-- With the local 7B model, each AI-student reply takes about 5–12 seconds.
+- Lecture recordings have to be added by hand. A connector for an approved lecture-capture system is defined but not built, because it needs API access granted by the university.
+- Quality of the AI student and grading depends on the model you run. Small local models can drift out of character or grade loosely.
+- The very first ingestion of a course can take a while, especially for recordings, because they are transcribed on your machine.
 
-## Security
+## Collaborating
 
-Passwords are bcrypt-hashed and Canvas tokens are encrypted at rest. The browser only holds a short-lived Pupil
-session token. Every query is scoped to the signed-in student and their enrolled courses. Never commit `backend/.env`
-or `backend/data/` (both are git-ignored).
+```
+git checkout -b your-feature     # make a branch for your work
+# ...edit...
+git add .
+git commit -m "Describe what you changed"
+git push -u origin your-feature  # then open a Pull Request on GitHub
+```
+
+Never commit your real `backend/.env`.
