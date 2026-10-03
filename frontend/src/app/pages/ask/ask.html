@@ -1,0 +1,189 @@
+<div class="container gap-24 ask">
+  @if (!turns().length) {
+    <section class="hero ask-hero">
+      <div class="hero__body">
+        <span class="eyebrow">ASK PUPIL · STUDY CHAT</span>
+        <h1 class="hero__title">Ask anything about your subjects.</h1>
+        <p>
+          Deadlines straight from Canvas. Explanations quoted from your lecture slides and recordings. "What's new in week 6?"
+          answered from the course knowledge graph. Every answer links back to where it came from.
+        </p>
+        <div class="ask-hero__sources">
+          @for (g of groups; track g.title) {
+            <span [class]="'ask-hero__source ask-hero__source--' + g.tone">
+              <svg appIcon [name]="g.icon" [size]="16" [stroke]="2.2"></svg>
+              {{ g.title }}
+            </span>
+          }
+        </div>
+      </div>
+      <div class="hero__pip">
+        <div class="bubble">I've read every lecture. Try me!</div>
+        <div class="bob">
+          <svg appAvatar persona="pip" [size]="150" [onDark]="true" label="Pip"></svg>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <header class="page-head">
+      <div class="row gap-14">
+        <span class="ask-mark"><svg appAvatar persona="pip" [size]="44" [onDark]="true"></svg></span>
+        <div class="stack gap-4">
+          <span class="small-heading">ASK PUPIL</span>
+          <h1 class="ask-title">Your study chat</h1>
+        </div>
+      </div>
+      <button type="button" class="btn btn--ghost" (click)="clear()">
+        <svg appIcon name="pen" [size]="16"></svg> New chat
+      </button>
+    </header>
+  }
+
+  <div class="ask-scope">
+    <span class="label-muted">Searching</span>
+    <div class="subject-tabs" role="group" aria-label="Which courses to search">
+      <button type="button" [attr.aria-pressed]="courseId() === null" (click)="courseId.set(null)">All my courses</button>
+      @for (s of subjects(); track s.id) {
+        <button type="button" [attr.aria-pressed]="courseId() === s.id" (click)="courseId.set(s.id)">
+          <span class="subject-tabs__code">{{ s.code }}</span>
+          {{ s.name }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (!turns().length) {
+    <section class="ask-groups" aria-label="Try asking">
+      @for (g of groups; track g.title) {
+        <article [class]="'ask-group ask-group--' + g.tone">
+          <div class="row gap-12">
+            <span class="ask-group__icon"><svg appIcon [name]="g.icon" [size]="22" [stroke]="2"></svg></span>
+            <div class="stack gap-4">
+              <h2 class="card-title card-title--sm ask-group__title">{{ g.title }}</h2>
+              <span class="ask-group__blurb">{{ g.blurb }}</span>
+            </div>
+          </div>
+          <div class="stack gap-8">
+            @for (q of g.questions; track q) {
+              <button type="button" class="ask-group__q" (click)="ask(q)">
+                <span>{{ q }}</span>
+                <svg appIcon name="arrowRight" [size]="16" [stroke]="2.2"></svg>
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </section>
+  } @else {
+    <section class="card ask-log" #log aria-live="polite" aria-label="Conversation">
+      @for (t of turns(); track $index; let i = $index) {
+        <div class="msg msg--me">
+          <div class="msg__bubble">{{ t.question }}</div>
+          <span class="msg__meta">{{ t.courseLabel }}</span>
+        </div>
+
+        <div class="ask-turn">
+          <span class="ask-turn__avatar"><svg appAvatar persona="pip" [size]="40" [onDark]="true" [mood]="t.error ? 'puzzled' : 'curious'"></svg></span>
+
+          @if (t.answer; as a) {
+            <div class="ask-turn__body">
+              <span [class]="'ask-route ask-route--' + routeLabel[a.route].tone">
+                <svg appIcon [name]="routeLabel[a.route].icon" [size]="14" [stroke]="2.2"></svg>
+                {{ routeLabel[a.route].label }}
+                @if (a.confidence < 0.5) {
+                  <span class="ask-route__low">· low confidence, check the sources</span>
+                }
+              </span>
+
+              <div class="ask-reply">
+                @for (p of parts(a); track $index) {
+                  @if (isCite(p)) {
+                    @if (link(p.source); as href) {
+                      <a class="ask-cite" [href]="href" target="_blank" rel="noreferrer" [title]="p.source?.title || p.cite">{{ p.cite }}</a>
+                    } @else {
+                      <span class="ask-cite" [title]="p.source?.title || p.cite">{{ p.cite }}</span>
+                    }
+                  } @else {
+                    <span>{{ p.text }}</span>
+                  }
+                }
+              </div>
+
+              @for (n of a.notes; track n) {
+                <p class="ask-note"><svg appIcon name="info" [size]="14"></svg>{{ n }}</p>
+              }
+
+              @if (a.sources.length) {
+                <div class="ask-sources">
+                  @for (s of visibleSources(a, i); track s.id) {
+                    <article [class]="'ask-source ask-source--' + s.type">
+                      <div class="row-between">
+                        <span class="ask-source__tile"><svg appIcon [name]="sourceIcon[s.type]" [size]="18" [stroke]="2"></svg></span>
+                        <span class="ask-source__id">{{ s.id }}</span>
+                      </div>
+                      <strong class="ask-source__title">{{ s.title }}</strong>
+                      @if (location(s); as loc) {
+                        <span class="ask-source__loc">{{ loc }}{{ s.support === 'inferred' ? ' · inferred' : '' }}</span>
+                      }
+                      @if (s.relation) {
+                        <span class="ask-source__rel">{{ s.relation }}</span>
+                      }
+                      @if (s.snippet) {
+                        <span class="ask-source__snippet">“{{ s.snippet }}”</span>
+                      }
+                      @if (link(s); as href) {
+                        <a class="ask-source__open" [href]="href" target="_blank" rel="noreferrer">
+                          <svg appIcon [name]="s.type === 'video' ? 'play' : 'arrowRight'" [size]="14" [stroke]="2.2"></svg>
+                          {{ s.type === 'video' ? 'Play at this moment' : s.type === 'canvas' ? 'Open in Canvas' : 'Open the slide' }}
+                        </a>
+                      }
+                    </article>
+                  }
+                </div>
+                @if (a.sources.length > previewCount) {
+                  <button type="button" class="link-btn link-sm ask-more" (click)="toggleSources(i)" [attr.aria-expanded]="!!openSources()[i]">
+                    {{ openSources()[i] ? 'Show fewer sources' : 'Show all ' + a.sources.length + ' sources' }}
+                  </button>
+                }
+              }
+            </div>
+          } @else if (t.error) {
+            <div class="ask-turn__body">
+              <div class="flag flag--hint ask-error">
+                <svg appIcon name="info" [size]="16"></svg>
+                {{ t.error }}
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (asking()) {
+        <div class="ask-turn">
+          <span class="ask-turn__avatar bob"><svg appAvatar persona="pip" [size]="40" [onDark]="true" mood="puzzled"></svg></span>
+          <div class="ask-thinking">
+            <div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>
+            <span>Checking Canvas, your lectures and the knowledge graph…</span>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <form class="ask-composer" (submit)="submit($event)">
+    <label for="ask-input" class="sr-only">Ask a question</label>
+    <span class="ask-composer__icon"><svg appIcon name="bulb" [size]="20" [stroke]="2"></svg></span>
+    <input
+      id="ask-input"
+      class="ask-composer__input"
+      autocomplete="off"
+      maxlength="2000"
+      placeholder="Ask about a deadline, a concept, or a week…"
+      [value]="draft()"
+      (input)="draft.set(value($event))"
+    />
+    <button type="submit" class="btn btn--violet ask-composer__send" [disabled]="!draft().trim() || asking()">
+      Ask <svg appIcon name="send" [size]="16" [stroke]="2.2"></svg>
+    </button>
+  </form>
+</div>

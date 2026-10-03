@@ -1,0 +1,9 @@
+@if (colored()) {
+  @switch (status()) {
+    @case ('E') {
+      <svg appIcon name="check" [size]="round(size() * 0.5)" [stroke]="3.5"></svg>
+    }
+    @case ('S') { ~ }
+    @default { ! }
+  }
+}

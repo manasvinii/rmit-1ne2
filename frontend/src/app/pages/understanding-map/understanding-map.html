@@ -1,0 +1,179 @@
+@if (loading() || (!layout() && error())) {
+  <div class="container gap-24">
+    <h1 class="page-title">Your Understanding Map</h1>
+    <section class="card stack gap-14">
+      @if (error()) {
+        <p class="form-error">{{ error() }}</p>
+        <div><a routerLink="/" class="btn btn--violet">Back home</a></div>
+      } @else {
+        <div class="info-bar">
+          <svg appIcon name="sync" [size]="20" class="spin" style="color: var(--violet)"></svg>
+          Drawing your map…
+        </div>
+      }
+    </section>
+  </div>
+} @else if (layout(); as tree) {
+<div class="container gap-24">
+  <header class="page-head">
+    <div class="stack gap-10">
+      <span class="pill pill--lime">
+        <svg appIcon name="check" [size]="14" [stroke]="3"></svg>
+        Session complete · {{ minutes() }} min with {{ persona().name }}
+      </span>
+      <h1 class="page-title">Here's what {{ persona().name }} learned from you.</h1>
+      <p class="lede">{{ lede() }}</p>
+    </div>
+    <div class="row wrap gap-10">
+      <button type="button" class="btn btn--ghost" title="Coming soon"><svg appIcon name="share" [size]="18"></svg> Share with tutor</button>
+      <button type="button" class="btn btn--ghost" title="Coming soon"><svg appIcon name="download" [size]="18"></svg> Save as revision notes</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="form-error">{{ error() }}</p>
+  }
+
+  <section class="card stack gap-20">
+    <div class="row-between wrap gap-12">
+      <h2 class="card-title">Your Understanding Map</h2>
+      <div class="legend legend--lg">
+        <span><span appStatusIcon status="E" [size]="18"></span>Explained well</span>
+        <span><span appStatusIcon status="S" [size]="18"></span>Shaky</span>
+        <span><span appStatusIcon status="G" [size]="18"></span>Couldn't explain</span>
+        <span><span appStatusIcon status="N" [size]="18"></span>Didn't come up</span>
+      </div>
+    </div>
+
+    <div class="tree-wrap">
+      <div class="tree" [style.width.px]="tree.width" [style.height.px]="tree.height">
+        @for (l of tree.lines; track $index) {
+          <span
+            class="tree__line"
+            [style.left.px]="l[0]"
+            [style.top.px]="l[1]"
+            [style.width.px]="l[2]"
+            [style.height.px]="l[3]"
+          ></span>
+        }
+        <div class="node node--root" [style.left.px]="tree.root.x" [style.top.px]="tree.root.y">
+          <span class="node--root__title">{{ tree.root.title }}</span>
+          <span class="node--root__sub">{{ tree.root.sub }}</span>
+        </div>
+        @for (n of tree.nodes; track n.id) {
+          <button
+            type="button"
+            [class]="'node node--' + n.status"
+            [class.is-selected]="selectedId() === n.id"
+            [style.left.px]="n.x"
+            [style.top.px]="n.y"
+            [attr.aria-pressed]="selectedId() === n.id"
+            [title]="n.title"
+            (click)="selectedId.set(n.id)"
+          >
+            <span appStatusIcon [status]="n.status" [size]="26"></span>
+            <span>
+              <span class="node__title">{{ n.title }}</span>
+              <span [class]="'node__state node__state--' + n.status">{{ nodeState[n.status] }}</span>
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (selected(); as s) {
+      <div [class]="'node-detail node-detail--' + s.status" aria-live="polite">
+        <span appStatusIcon [status]="s.status" [size]="32" [square]="true"></span>
+        <div class="stack gap-4">
+          <strong>{{ s.title }}</strong>
+          <span>{{ s.note }}</span>
+          @if (s.time) {
+            <span class="small-text muted">Came up at {{ s.time }} in the session.</span>
+          }
+        </div>
+        @if (link(s.source?.url); as href) {
+          <a [href]="href" target="_blank" rel="noreferrer" class="btn btn--ghost" [title]="s.source!.label">
+            <svg appIcon name="slides" [size]="14"></svg> Open the slide
+          </a>
+        }
+      </div>
+    }
+  </section>
+
+  <div class="row-wrap gap-20 align-stretch">
+    <section class="card breakdown stack gap-14">
+      <h2 class="card-title card-title--md">Where your explanation broke down</h2>
+      @for (issue of issues(); track issue.title) {
+        <div [class]="'issue issue--' + issue.status">
+          <span appStatusIcon [status]="issue.status" [size]="32" [square]="true"></span>
+          <div class="stack gap-6">
+            <strong>{{ issue.title }}</strong>
+            <span class="issue__text">{{ issue.text }}</span>
+            @if (link(issue.source?.url); as href) {
+              <a [href]="href" target="_blank" rel="noreferrer" class="link-strong small-text">
+                Check {{ issue.source!.label }}{{ issue.time ? ' · came up at ' + issue.time : '' }}
+              </a>
+            } @else if (issue.time) {
+              <span class="small-text muted">Came up at {{ issue.time }}</span>
+            }
+          </div>
+        </div>
+      } @empty {
+        <p class="label-muted">Nothing broke down. Every idea you covered landed.</p>
+      }
+    </section>
+
+    <section class="map-side stack gap-20">
+      <div class="score-card">
+        <span class="small-text" style="color: var(--nav-text); font-weight: 600">Ideas that landed</span>
+        <span class="big-number">
+          {{ landed() }} <span class="big-number__of">of {{ total() }}</span>
+        </span>
+        <div class="score-bar">
+          @for (s of scoreBar(); track $index) {
+            <span [class]="s"></span>
+          }
+        </div>
+        @if (weakCount() > 0) {
+          <button type="button" class="btn btn--lime btn--lg btn--block" (click)="again('reteach')" [disabled]="!!starting()">
+            {{ starting() === 'reteach' ? 'Setting up…' : 'Re-teach my ' + weakCount() + ' weak spot' + (weakCount() === 1 ? '' : 's') }}
+          </button>
+        }
+        <button type="button" class="btn btn--outline-dark btn--block" (click)="again('other')" [disabled]="!!starting()">
+          {{ starting() === 'other' ? 'Setting up…' : 'Try ' + otherPersona().name + ' on the same topic' }}
+        </button>
+      </div>
+
+      @if (toughestQuestion(); as q) {
+        <div class="quote-card">
+          <svg appAvatar [persona]="persona().id" [size]="44"></svg>
+          <div class="stack gap-6">
+            <span class="eyebrow eyebrow--ink">{{ persona().name.toUpperCase() }}'S TOUGHEST QUESTION</span>
+            <span class="quote-card__text">{{ q }}</span>
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+
+  @if (semester().length) {
+    <section class="card stack gap-14">
+      <div class="row-between wrap gap-8">
+        <h2 class="card-title card-title--md">{{ subjectName() }} across the semester</h2>
+        @if (upcoming(); as up) {
+          <span class="small-text muted">{{ up }} unlock as they're released on Canvas</span>
+        }
+      </div>
+      <div class="sem">
+        @for (cell of semester(); track $index) {
+          <div [class]="'sem__cell sem__cell--' + cell.c">
+            <span class="sem__week">WEEK</span>
+            <span class="sem__num">{{ $index + 1 }}</span>
+            <span class="sem__label">{{ cell.label }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>
+}

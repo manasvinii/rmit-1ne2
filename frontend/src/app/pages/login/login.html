@@ -1,0 +1,151 @@
+<div class="login">
+  <aside class="login__art">
+    <app-brand />
+
+    <div class="login__stage" aria-hidden="true">
+      <div class="float float--sage">
+        <svg appAvatar persona="sage" [size]="84"></svg>
+        <div class="bubble bubble--sm">Prove it.</div>
+      </div>
+      <div class="login__pip">
+        <div class="bubble">Wait… why does that happen?</div>
+        <div class="bob">
+          <svg appAvatar persona="pip" [size]="180" [onDark]="true"></svg>
+        </div>
+      </div>
+      <div class="float float--milo">
+        <div class="bubble bubble--sm">Isn't heavier stuff faster?</div>
+        <svg appAvatar persona="milo" [size]="88"></svg>
+      </div>
+    </div>
+
+    <div class="login__copy">
+      <h1 class="login__headline">Learn it by <mark>teaching</mark> it.</h1>
+      <p class="login__lede">
+        Pupil turns each week of your Canvas course into a student who needs your help. Explain it out loud, and find
+        your gaps before the exam does.
+      </p>
+      <ul class="login__features">
+        <li>
+          <svg appIcon name="sync" [size]="18"></svg>
+          Syncs your weekly lectorials, slides and readings
+        </li>
+        <li>
+          <svg appIcon name="mic" [size]="18"></svg>
+          Explain out loud to a student who keeps asking "why?"
+        </li>
+        <li>
+          <svg appIcon name="map" [size]="18"></svg>
+          See exactly what you understand, week by week
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <section class="login__panel">
+    <div class="login-card">
+      <div class="login-card__mobile-brand">
+        <app-brand [tagline]="false" />
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="login-card__title">{{ isSignup ? 'Create your account' : 'Welcome back' }}</h2>
+        <p class="login-card__sub">
+          {{ isSignup ? 'Your students are waiting to be taught.' : 'Your students have questions. Sign in to answer them.' }}
+        </p>
+      </div>
+
+      <button type="button" class="btn-sso" (click)="continueWithCanvas()" [disabled]="!!busy()">
+        <span class="btn-sso__mark">
+          <svg appIcon name="cap" [size]="20"></svg>
+        </span>
+        {{ busy() === 'canvas' ? 'Connecting to Canvas…' : 'Continue with Canvas' }}
+      </button>
+      <p class="fine-print">Demo build: signs you in as the demo student whose Canvas course has been synced.</p>
+
+      <div class="divider-label">
+        <span>or with your email</span>
+      </div>
+
+      <form class="stack gap-16" (submit)="submit($event)" novalidate>
+        @if (isSignup) {
+          <div class="field">
+            <label for="name">Full name</label>
+            <input
+              id="name"
+              class="input"
+              autocomplete="name"
+              placeholder="Riya Sharma"
+              [value]="name()"
+              (input)="name.set(value($event))"
+            />
+          </div>
+        }
+
+        <div class="field">
+          <label for="email">University email</label>
+          <input
+            id="email"
+            type="email"
+            class="input"
+            autocomplete="email"
+            placeholder="you@uni.edu.au"
+            [value]="email()"
+            (input)="email.set(value($event))"
+          />
+        </div>
+
+        <div class="field">
+          <div class="field__row">
+            <label for="password">Password</label>
+            @if (!isSignup) {
+              <a href="#forgot" class="link-sm">Forgot password?</a>
+            }
+          </div>
+          <div class="input-wrap">
+            <input
+              id="password"
+              class="input"
+              [type]="showPassword() ? 'text' : 'password'"
+              [attr.autocomplete]="isSignup ? 'new-password' : 'current-password'"
+              [placeholder]="isSignup ? 'At least 8 characters' : '••••••••'"
+              [value]="password()"
+              (input)="password.set(value($event))"
+            />
+            <button
+              type="button"
+              class="input-wrap__reveal"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            >
+              <svg appIcon [name]="showPassword() ? 'eyeOff' : 'eye'" [size]="20"></svg>
+            </button>
+          </div>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" [checked]="remember()" (change)="remember.set(!remember())" />
+          Keep me signed in on this device
+        </label>
+
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
+
+        <button type="submit" class="btn btn--violet btn--lg btn--block" [disabled]="!!busy()">
+          {{ busy() === 'email' ? 'Signing in…' : isSignup ? 'Create account' : 'Sign in' }}
+          @if (!busy()) {
+            <svg appIcon name="arrowRight" [size]="18" [stroke]="2"></svg>
+          }
+        </button>
+      </form>
+
+      <p class="login-card__switch">
+        {{ isSignup ? 'Already have an account?' : 'New to Pupil?' }}
+        <button type="button" class="link-btn" (click)="switchMode()">
+          {{ isSignup ? 'Sign in' : 'Create an account' }}
+        </button>
+      </p>
+    </div>
+  </section>
+</div>

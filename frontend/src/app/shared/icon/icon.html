@@ -1,0 +1,102 @@
+@switch (name()) {
+  @case ('home') {
+    <svg:path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />
+  }
+  @case ('book') {
+    <svg:path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z" />
+    <svg:path d="M4 17a3 3 0 0 1 3-3h11" />
+  }
+  @case ('map') {
+    <svg:path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z" />
+    <svg:path d="M9 4v14M15 6v14" />
+  }
+  @case ('clock') {
+    <svg:circle cx="12" cy="12" r="9" />
+    <svg:path d="M12 7v5l3 2" />
+  }
+  @case ('timer') {
+    <svg:circle cx="12" cy="13" r="8" />
+    <svg:path d="M12 9v4l2 2M9 2h6" />
+  }
+  @case ('sync') {
+    <svg:path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" />
+    <svg:path d="M4 4v4h4" />
+    <svg:path d="M4 13a8 8 0 0 0 14.5 4.5L20 16" />
+    <svg:path d="M20 20v-4h-4" />
+  }
+  @case ('arrowRight') {
+    <svg:path d="M5 12h14M13 6l6 6-6 6" />
+  }
+  @case ('arrowLeft') {
+    <svg:path d="M19 12H5M11 6l-6 6 6 6" />
+  }
+  @case ('chevronRight') {
+    <svg:path d="m9 6 6 6-6 6" />
+  }
+  @case ('video') {
+    <svg:rect x="3" y="5" width="14" height="14" rx="2" />
+    <svg:path d="m17 10 4-2v8l-4-2" />
+  }
+  @case ('slides') {
+    <svg:rect x="3" y="4" width="18" height="13" rx="2" />
+    <svg:path d="M12 17v4M8 21h8" />
+  }
+  @case ('file') {
+    <svg:path d="M6 3h9l4 4v14H6z" />
+    <svg:path d="M14 3v5h5M9 13h7M9 17h5" />
+  }
+  @case ('calendar') {
+    <svg:rect x="3" y="5" width="18" height="16" rx="3" />
+    <svg:path d="M3 10h18M8 3v4M16 3v4" />
+  }
+  @case ('info') {
+    <svg:circle cx="12" cy="12" r="9" />
+    <svg:path d="M12 8v4M12 16h.01" />
+  }
+  @case ('mic') {
+    <svg:rect x="9" y="3" width="6" height="12" rx="3" />
+    <svg:path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+  }
+  @case ('keyboard') {
+    <svg:rect x="2" y="6" width="20" height="12" rx="2" />
+    <svg:path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+  }
+  @case ('pen') {
+    <svg:path d="M3 21l3.5-1 11-11-2.5-2.5-11 11z" />
+    <svg:path d="M14 6l2.5 2.5" />
+  }
+  @case ('bulb') {
+    <svg:path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z" />
+  }
+  @case ('check') {
+    <svg:path d="m5 12 5 5 9-10" />
+  }
+  @case ('play') {
+    <svg:path d="M7 4v16l13-8z" fill="currentColor" stroke="none" />
+  }
+  @case ('share') {
+    <svg:path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13" />
+  }
+  @case ('download') {
+    <svg:path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+  }
+  @case ('logout') {
+    <svg:path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" />
+  }
+  @case ('eye') {
+    <svg:path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+    <svg:circle cx="12" cy="12" r="3" />
+  }
+  @case ('eyeOff') {
+    <svg:path d="M3 3l18 18" />
+    <svg:path d="M10.6 6.1A10 10 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 6.6C3.7 8.4 2 12 2 12s3.5 6 10 6c1.7 0 3.2-.4 4.5-1" />
+    <svg:path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  }
+  @case ('cap') {
+    <svg:path d="M2 9l10-5 10 5-10 5z" />
+    <svg:path d="M6 11v5c3 2.5 9 2.5 12 0v-5M22 9v6" />
+  }
+  @case ('send') {
+    <svg:path d="M4 12l16-8-6 16-2.5-6.5z" />
+  }
+}

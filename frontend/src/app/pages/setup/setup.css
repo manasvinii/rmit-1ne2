@@ -1,0 +1,14 @@
+:host {
+  display: contents;
+}
+
+/* Download / open button at the end of each Canvas material row */
+.material__open {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 8px;
+}
+.material__open:hover {
+  background: var(--line-soft);
+}

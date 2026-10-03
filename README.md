@@ -2,93 +2,100 @@
 
 > Every AI study tool explains things to you. Pupil flips it: **you** teach a confused AI student, and it finds the gaps in your understanding.
 
-This is the front-end prototype for our "Innovating Education" hackathon entry. Students pick a week (or everything up to a week) of their Canvas course, then explain it out loud to an AI student who only knows that week's material. At the end they get an **Understanding Map** showing what they explained well, what was shaky, and what they couldn't explain.
+Our "Innovating Education" hackathon entry. Students pick any weeks of their Canvas course (one week, everything up
+to a week, or any combination) and tick which materials to use. They then explain the ideas, out loud or typed, to
+an AI student who **only knows the ticked material**:
 
-Everything is mock data right now. There is no backend yet.
+- **Pip**, the curious kid, needs it simple.
+- **Sage**, the sceptic, wants mechanisms and proof.
+- **Milo**, the mixed-up one, starts with a misconception you have to talk him out of.
+
+At the end they get an **Understanding Map** showing what they explained well, what was shaky, what they couldn't
+explain, and which slide to check for each.
+
+```
+frontend/   Angular app (the Pupil UI)
+backend/    FastAPI: auth, Canvas sync, ingestion (PDF slides, lecture recordings, lab notebooks),
+            vector + knowledge-graph retrieval, and the teaching engine behind /api/*
+```
+
+## How it works
+
+1. **Canvas → local store.** Course modules and files are synced with the student's own Canvas token, which is
+   stored encrypted on the server and never sent to the browser. Slides, uploaded recordings and lab notebooks are
+   downloaded and kept aside.
+2. **Ingestion.** Each file is split into chunks that remember their page, timestamp or notebook cell. The chunks
+   are embedded for search and turned into a **knowledge graph** (concepts, the lecture they were introduced in, and
+   what builds on what). Every graph edge cites the chunks it came from.
+3. **Setup.** The chosen weeks and ticks become an exact list of allowed resources. Everything the AI student sees
+   is filtered to that list.
+4. **Teaching.** The session's ideas are the concepts the graph says were introduced in those weeks, provided
+   they are backed by the ticked material. Every reply is grounded in retrieved chunks from that material. The
+   persona replies with a local LLM (Ollama `qwen2.5:7b`); if no LLM is available, a rule-based fallback is used.
+5. **Map.** Each idea is graded as explained, shaky, gap or didn't come up, with the slide or recording moment to
+   revisit. Weak spots feed the Home page and the semester strip.
 
 ## Run it locally
 
-You need **Node.js 18 or newer** ([download](https://nodejs.org)).
+You need Python 3.12, Node.js 20.19+ / 22.12+, and optionally [Ollama](https://ollama.com) with
+`ollama pull qwen2.5:7b` (without it the AI student uses the rule-based fallback).
 
 ```bash
+# terminal 1: backend on :8000
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env          # set DEMO_USER_EMAIL for the "Continue with Canvas" demo button
+.venv/bin/python -m uvicorn app.main:app --port 8000
+
+# terminal 2: frontend on :5173
+cd frontend
 npm install
-npm run dev
+npm start
 ```
 
-Then open http://localhost:5173.
+Open http://localhost:5173 and click **Continue with Canvas**. In this demo build that signs you in as the demo
+student whose Canvas course has been synced. You can also create an account with email and a password of 8+
+characters, then add your Canvas token on the backend (see `backend/README.md`).
 
-On the login screen, click **Continue with Canvas** to sign in as the demo student, or type any email plus a password of 6+ characters.
-
-| Command           | What it does                              |
-| ----------------- | ----------------------------------------- |
-| `npm run dev`     | Start the dev server with hot reload      |
-| `npm run build`   | Build a production version into `dist/`   |
-| `npm run preview` | Serve the production build locally        |
+Loading your own course content is covered in `backend/README.md` (`python -m app.cli canvas-content --ingest`,
+`ingest-labs`).
 
 ## Screens
 
-| Route      | Screen                | What works                                                                 |
-| ---------- | --------------------- | -------------------------------------------------------------------------- |
-| `/login`   | Login / sign up       | Canvas button, email form with validation, show/hide password, sign-up mode |
-| `/`        | Home                  | Greeting, this week's hero card, streak, subjects with week strips, gaps   |
-| `/setup`   | New teaching session  | Pick subject, single week or range, Canvas files, AI student, voice/text, length |
-| `/session` | Teaching session      | Mic toggle with live waveform, typing with canned AI replies, slide hints, timer |
-| `/map`     | Understanding Map     | Clickable concept map, breakdown of weak spots, semester overview          |
+| Route      | Screen               | Backed by                                                                  |
+| ---------- | -------------------- | -------------------------------------------------------------------------- |
+| `/login`   | Login / sign up      | `POST /login`, `POST /signup`, `POST /api/demo-login`                      |
+| `/`        | Home                 | `/api/subjects`, `/api/sessions`, `/api/gaps`, `/me/assignments`, `/canvas/sync` |
+| `/setup`   | New teaching session | `/api/subjects/{id}/materials`, `/api/subjects/{id}/download`               |
+| `/session` | Teaching session     | `/api/sessions` (start, messages, hint, end); voice via the browser's Web Speech API |
+| `/map`     | Understanding Map    | `/api/sessions/{id}/map`, `/api/sessions/{id}/reteach`                      |
+| `/ask`     | Ask Pupil (chatbot)  | `POST /query`, which routes each question (see below)                        |
 
-All pages except `/login` need you to be signed in. The log-out button is at the bottom of the sidebar.
+**Ask Pupil** answers any question about your subjects, and every answer cites its sources:
 
-## Project structure
+- **Canvas data** (assignments, due dates, course list) answers factual questions like "when is A2 due". These
+  answers come straight from the synced tables with no LLM, so dates can't be invented.
+- **Vector search** over slide text and video transcripts answers "explain X" questions and links to the exact slide
+  or timestamp.
+- **The knowledge graph** (concepts, the week that introduced them, prerequisites, what each assignment assesses)
+  answers "what's new in week 6", "what should I revise before CNNs" and "which lectures do I need for A2".
 
-```
-src/
-  main.jsx              App entry (router + auth provider)
-  App.jsx               Routes
-  auth.jsx              MOCK login (localStorage). Replace with real auth.
-  data/mockData.js      ALL fake data lives here: subjects, weeks, personas, chat script, map
-  components/
-    AppLayout.jsx       Dark sidebar + page area
-    Avatar.jsx          Pip, Sage and Milo (inline SVG)
-    Brand.jsx           Logo
-    Icon.jsx            Icon set
-    StatusIcon.jsx      ✓ / ~ / ! status markers
-  pages/
-    Login.jsx
-    Home.jsx
-    Setup.jsx
-    Session.jsx
-    UnderstandingMap.jsx
-  styles/global.css     Design tokens at the top (colours, fonts), then styles per screen
-```
+A rule-based router picks the source, and the label above each answer shows which one was used. For lecture and
+graph questions, the LLM writes the answer only from the retrieved evidence.
 
-**Changing the look:** edit the variables at the top of `src/styles/global.css`.
-**Changing the content:** edit `src/data/mockData.js`.
+Opening `/session` or `/map` directly without a session shows the original scripted demo.
 
-## Known limitations (it's a prototype)
+## Known limitations
 
-- The teaching conversation and Understanding Map are a **scripted demo about hash tables** (Data Structures, Week 6). Picking another subject or week changes the headers but not the script.
-- The AI student's typed replies are canned. Speech is not captured; the mic button only toggles the UI.
-- "Draw it", "Share with tutor" and "Save as revision notes" are placeholders.
+- Echo360 lecture recordings can't be downloaded; only recordings uploaded to Canvas as files get transcripts.
+- Canvas Pages and textbooks are not ingested yet. The current inputs are slides, uploaded recordings and lab
+  notebooks.
+- Voice input needs a browser with the Web Speech API (Chrome, Edge, Safari). Otherwise use **Type**.
+- "Draw it", "Share with tutor" and "Save as revision notes" are still placeholders.
+- With the local 7B model, each AI-student reply takes about 5–12 seconds.
 
-## Where the real features plug in
+## Security
 
-| Feature                  | Where in the code                                  | Ideas                                                         |
-| ------------------------ | -------------------------------------------------- | ------------------------------------------------------------- |
-| Real login               | `src/auth.jsx`                                     | Canvas OAuth2 (developer key), or Firebase / Supabase auth    |
-| Canvas courses & files   | `SUBJECTS`, `materialsFor()` in `mockData.js`      | Canvas REST API: courses, modules, files                      |
-| AI student replies       | `send()` in `pages/Session.jsx`                    | LLM call with the persona prompt + that week's material       |
-| Voice                    | mic button in `pages/Session.jsx`                  | Browser Web Speech API for a quick demo, or a speech-to-text API |
-| Understanding Map        | `MAP_NODES` in `mockData.js`                       | Ask the LLM to grade each key idea at the end of the session  |
-
-## Collaborating
-
-```bash
-git checkout -b your-feature     # make a branch for your work
-# ...edit...
-git add .
-git commit -m "Describe what you changed"
-git push -u origin your-feature  # then open a Pull Request on GitHub
-```
-
-## Deploying a live demo
-
-The easiest option is [Vercel](https://vercel.com) or [Netlify](https://netlify.com): import the GitHub repo, keep the defaults (build command `npm run build`, output folder `dist`), and you get a public link to share with judges. Because this app uses client-side routes, Netlify needs a `public/_redirects` file containing `/* /index.html 200`. Vercel detects Vite and handles this for you.
+Passwords are bcrypt-hashed and Canvas tokens are encrypted at rest. The browser only holds a short-lived Pupil
+session token. Every query is scoped to the signed-in student and their enrolled courses. Never commit `backend/.env`
+or `backend/data/` (both are git-ignored).

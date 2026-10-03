@@ -6,3 +6,19 @@ dist
 *.log
 .vscode/*
 !.vscode/extensions.json
+
+# Backend: local DB, generated dev secrets, downloaded course content, caches
+backend/.env
+backend/*.env
+backend/data/
+backend/.venv
+backend/venv/
+backend/*.db
+backend/eval/results/
+**/__pycache__/
+.pytest_cache/
+*.egg-info/
+# lecture media is copyrighted course material
+*.mp4
+*.pdf
+frontend/.angular/
