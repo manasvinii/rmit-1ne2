@@ -1,0 +1,22 @@
+{
+  "_comment": "Optional surface-form normalisation only (abbreviation -> long form). Applied only when the long form already exists in the course material; never creates concepts or relations.",
+  "aliases": {
+    "GD": "Gradient Descent",
+    "SGD": "Stochastic Gradient Descent",
+    "NN": "Neural Network",
+    "NNs": "Neural Networks",
+    "ANN": "Artificial Neural Network",
+    "CNN": "Convolutional Neural Network",
+    "ConvNet": "Convolutional Neural Network",
+    "RNN": "Recurrent Neural Network",
+    "MLP": "Multi-Layer Perceptron",
+    "SVM": "Support Vector Machine",
+    "SVC": "Support Vector Classifier",
+    "backprop": "Backpropagation",
+    "Back-propagation": "Backpropagation",
+    "PCA": "Principal Component Analysis",
+    "MSE": "Mean Squared Error",
+    "kNN": "K-Nearest Neighbours",
+    "ROC": "Receiver Operating Characteristic"
+  }
+}
